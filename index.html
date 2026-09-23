@@ -163,7 +163,6 @@
     }
     .info-list li { margin-bottom: 4px; }
 
-    /* スマホ用下部フローティングドロワー＆コントロールバー */
     .mobile-drawer {
       display: none;
       position: fixed;
@@ -185,9 +184,7 @@
       padding: 12px 14px 6px 14px;
       display: none;
     }
-    .drawer-content.open {
-      display: block;
-    }
+    .drawer-content.open { display: block; }
     .mobile-bottom-bar {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -357,7 +354,7 @@
             <span class="edit-name-btn" title="ビルド名を変更" onclick="renameCurrentBuild()">✏️</span>
           </div>
           <div style="display: flex; gap: 6px;">
-            <button class="btn btn-sub" style="padding:4px 8px; font-size:0.7rem;" onclick="openShareModal()">🔗 共有/読込</button>
+            <button class="btn btn-sub" style="padding:4px 8px; font-size:0.7rem;" onclick="openShareModal()">🔗 ビルド入出力/共有</button>
           </div>
         </div>
         <div class="build-selector">
@@ -452,7 +449,6 @@
   </div>
 </div>
 
-<!-- スマホ用下部ドロワー＆コントロールバー -->
 <div class="mobile-drawer" id="mobileDrawer">
   <div class="drawer-content" id="drawerContent">
     <div style="margin-bottom: 12px;">
@@ -500,7 +496,7 @@
 </div>
 
 <div class="desktop-bottom-actions">
-  <button class="btn btn-sub" style="width: 200px;" onclick="openShareModal()">🔗 共有 / 読み込み</button>
+  <button class="btn btn-sub" style="width: 220px;" onclick="openShareModal()">🔗 ビルド入出力 / 共有</button>
   <button class="btn" style="flex: 1; max-width: 500px;" onclick="runOptimization()">最適配置（自動計算）を実行</button>
 </div>
 
@@ -510,7 +506,7 @@
       <h3>幻獣図鑑（愛称・名付け編集）</h3>
       <button class="close-btn" onclick="closeMasterModal()">&times;</button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
       <div class="table-container">
         <table>
           <thead>
@@ -523,6 +519,9 @@
           <tbody id="masterTable"></tbody>
         </table>
       </div>
+      <div style="display: flex; justify-content: flex-end;">
+        <button class="btn" style="padding: 10px 20px; font-size: 0.85rem;" onclick="saveMasterModal()">保存して反映する</button>
+      </div>
     </div>
   </div>
 </div>
@@ -530,12 +529,13 @@
 <div id="shareModal" class="modal">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>ビルドの共有・読み込み</h3>
+      <h3 id="shareModalTitle">ビルドデータの入出力・共有</h3>
       <button class="close-btn" onclick="closeShareModal()">&times;</button>
     </div>
     <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
       <div>
-        <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">① 現在のビルドの共有用URL</label>
+        <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;" id="exportLabel">① 現在選択中のビルドの出力（共有用URL / コード）</label>
+        <div style="font-size:0.75rem; color:#64748b; margin-bottom:6px;">このビルドのデータを他の人へ共有したり、テキストとしてバックアップ・移行したりできます。</div>
         <div style="display: flex; gap: 6px;">
           <input type="text" id="shareUrlInput" readonly class="input-nickname" style="background:#f1f5f9; cursor:pointer;" onclick="this.select();">
           <button class="btn" style="padding: 6px 12px; font-size:0.8rem; white-space:nowrap;" onclick="copyShareUrl()">コピー</button>
@@ -543,11 +543,11 @@
       </div>
       <hr style="border:none; border-top:1px solid var(--border);">
       <div>
-        <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">② 共有用URL / コードの読み込み</label>
-        <div style="font-size:0.75rem; color:#64748b; margin-bottom:6px;">受け取った共有URL、または文字列を入力して現在のビルド（または別ビルド）に上書き反映します。</div>
-        <textarea id="importDataInput" class="input-nickname" rows="3" placeholder="URLまたはデータをここに貼り付け..."></textarea>
+        <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;" id="importLabel">② データの入れ替え（インポート）</label>
+        <div style="font-size:0.75rem; color:#64748b; margin-bottom:6px;">バックアップした共有用URLやデータをここに貼り付けると、<strong>今選択しているビルドタブ</strong>にデータが上書き保存されます。</div>
+        <textarea id="importDataInput" class="input-nickname" rows="3" placeholder="共有用URL、またはデータ文字列をここに貼り付け..."></textarea>
         <div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px;">
-          <button class="btn" style="padding: 8px 16px; font-size:0.85rem;" onclick="importBuildData()">データを読み込む</button>
+          <button class="btn" style="padding: 8px 16px; font-size:0.85rem;" onclick="importBuildData()">このビルドへデータを読み込む</button>
         </div>
       </div>
     </div>
@@ -596,17 +596,39 @@ let MASTER_DATA = [];
 let sortKey = '';
 let sortAsc = true;
 
+// 安全なBase64エンコード・デコード関数（日本語・マルチバイト文字対応）
+function encodeBase64(str) {
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
+}
+
+function decodeBase64(base64Str) {
+  // URLやゴミ文字を取り除くクレンジング
+  let cleanStr = base64Str.trim();
+  if (cleanStr.includes('data=')) {
+    const parts = cleanStr.split('data=');
+    cleanStr = parts[parts.length - 1].split('&')[0];
+  } else if (cleanStr.includes('?')) {
+    const queryPart = cleanStr.split('?')[1];
+    const params = new URLSearchParams(queryPart);
+    cleanStr = params.get('data') || params.get('buildData') || cleanStr;
+  }
+  
+  const binaryString = atob(cleanStr);
+  const bytes = Uint8Array.from(binaryString, (m) => m.charCodeAt(0));
+  const decodedUri = Array.from(bytes, (byte) => '%' + ('00' + byte.toString(16)).slice(-2)).join('');
+  return decodeURIComponent(decodedUri);
+}
+
 window.onload = () => {
-  // URLクエリに共有データやコードが含まれているかチェック
   const urlParams = new URLSearchParams(window.location.search);
   const sharedData = urlParams.get('buildData') || urlParams.get('data');
   if (sharedData) {
     try {
-      const decoded = JSON.parse(atob(sharedData));
+      const jsonStr = decodeBase64(sharedData);
+      const decoded = JSON.parse(jsonStr);
       if (Array.isArray(decoded)) {
         MASTER_DATA = decoded;
         saveCurrentBuildData();
-        // クエリを綺麗にする
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     } catch(e) {}
@@ -622,7 +644,7 @@ function getBuildName(buildId) {
 
 function loadBuildData(buildId) {
   const saved = localStorage.getItem(`genju_tool_build_${buildId}`);
-  if (saved && (!MASTER_DATA || MASTER_DATA.length === 0 || buildId !== currentBuildId)) {
+  if (saved) {
     try {
       const savedList = JSON.parse(saved);
       MASTER_DATA = INITIAL_MASTER_DATA.map(initItem => {
@@ -642,7 +664,7 @@ function loadBuildData(buildId) {
     } catch(e) {
       MASTER_DATA = JSON.parse(JSON.stringify(INITIAL_MASTER_DATA));
     }
-  } else if (!saved) {
+  } else {
     MASTER_DATA = JSON.parse(JSON.stringify(INITIAL_MASTER_DATA));
   }
 
@@ -667,6 +689,8 @@ function renameCurrentBuild() {
 }
 
 function switchBuild(buildId) {
+  if (currentBuildId === buildId) return;
+  saveCurrentBuildData();
   currentBuildId = buildId;
   for (let i = 1; i <= 3; i++) {
     const btn = document.getElementById(`buildBtn${i}`);
@@ -749,14 +773,6 @@ function updateBase(id, val) {
     recalculateAll();
     saveCurrentBuildData();
     renderTable();
-  }
-}
-
-function updateNickname(id, val) {
-  const item = MASTER_DATA.find(e => e.id === id);
-  if (item) {
-    item.nickname = val;
-    saveCurrentBuildData();
   }
 }
 
@@ -1047,7 +1063,7 @@ function renderTable() {
         </select>
       </td>
       <td>
-        <input type="number" class="input-number" step="${cfg.step}" min="0" max="${cfg.max}" value="${e.sync}" onchange="updateSync(${e.id}, this.value)" ${!e.owned?'disabled':''}>
+        <input type="number" class="input-number" step="${cfg.step}" min="0" max="${cfg.max}" value="${e.sync}" oninput="updateSync(${e.id}, this.value)" ${!e.owned?'disabled':''}>
       </td>
       <td>
         <select class="${baseSelectClass}" onchange="updateBase(${e.id}, parseFloat(this.value))" ${!e.owned?'disabled':''}>
@@ -1074,7 +1090,7 @@ function openMasterModal() {
       <td style="font-weight:600;">${e.name}</td>
       <td><span class="badge badge-${e.rarity}">${e.rarity}</span> <span class="type-tag">${e.type}</span></td>
       <td>
-        <input type="text" class="input-nickname" value="${e.nickname || ''}" placeholder="例: 相棒、主力など" oninput="updateNickname(${e.id}, this.value)">
+        <input type="text" class="input-nickname master-nickname-input" data-id="${e.id}" value="${e.nickname || ''}" placeholder="例: 相棒、主力など">
       </td>
     `;
     tbody.appendChild(tr);
@@ -1086,9 +1102,29 @@ function closeMasterModal() {
   document.getElementById('masterModal').style.display = 'none';
 }
 
+function saveMasterModal() {
+  const inputs = document.querySelectorAll('.master-nickname-input');
+  inputs.forEach(input => {
+    const id = parseInt(input.getAttribute('data-id'));
+    const item = MASTER_DATA.find(e => e.id === id);
+    if (item) {
+      item.nickname = input.value.trim();
+    }
+  });
+  saveCurrentBuildData();
+  recalculateAll();
+  renderTable();
+  closeMasterModal();
+}
+
 function openShareModal() {
+  const bName = getBuildName(currentBuildId);
+  document.getElementById('shareModalTitle').textContent = `「${bName}」のデータ入出力・共有`;
+  document.getElementById('exportLabel').textContent = `① 「${bName}」の出力（共有用URL / コード）`;
+  document.getElementById('importLabel').textContent = `② 「${bName}」へのデータ入れ替え（インポート）`;
+
   const jsonStr = JSON.stringify(MASTER_DATA);
-  const encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+  const encoded = encodeBase64(jsonStr);
   const shareUrl = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
   document.getElementById('shareUrlInput').value = shareUrl;
   document.getElementById('importDataInput').value = '';
@@ -1111,23 +1147,14 @@ function copyShareUrl() {
 }
 
 function importBuildData() {
-  let val = document.getElementById('importDataInput').value.trim();
+  const val = document.getElementById('importDataInput').value.trim();
+  const bName = getBuildName(currentBuildId);
   if (!val) {
-    alert('URLまたはデータを入力してください。');
+    alert('共有用URLまたはデータ文字列を入力してください。');
     return;
   }
   try {
-    // URL形式から data= の部分を抽出を試みる
-    if (val.includes('data=')) {
-      const url = new URL(val);
-      val = url.searchParams.get('data') || val;
-    } else if (val.includes('?')) {
-      const parts = val.split('?');
-      const params = new URLSearchParams(parts[1]);
-      val = params.get('data') || val;
-    }
-
-    const jsonStr = decodeURIComponent(escape(atob(val)));
+    const jsonStr = decodeBase64(val);
     const parsed = JSON.parse(jsonStr);
     if (Array.isArray(parsed) && parsed.length > 0) {
       MASTER_DATA = INITIAL_MASTER_DATA.map(initItem => {
@@ -1148,12 +1175,12 @@ function importBuildData() {
       recalculateAll();
       renderTable();
       closeShareModal();
-      alert(`【${getBuildName(currentBuildId)}】にデータを正常に読み込みました！`);
+      alert(`【${bName}】へデータを正常に入れ替え（上書き）しました！`);
     } else {
       throw new Error('Invalid format');
     }
   } catch(e) {
-    alert('データの読み込みに失敗しました。正しい共有用URLまたは文字列を入力してください。');
+    alert('データの読み込みに失敗しました。正しい共有用URLやデータが入力されているかご確認ください。');
   }
 }
 </script>
