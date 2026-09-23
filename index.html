@@ -170,36 +170,55 @@
       margin-bottom: 6px;
     }
 
-    /* スマホ用アコーディオンパネル */
-    .mobile-accordion-card {
+    /* スマホ用下部フローティングドロワー（iPhoneのバー風） */
+    .mobile-drawer {
       display: none;
-      background: var(--card-bg);
-      border-radius: 16px;
-      margin-bottom: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.6);
-      box-shadow: 0 4px 20px -2px rgba(148, 163, 184, 0.25);
-      overflow: hidden;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.15);
+      z-index: 50;
+      border-top: 1px solid rgba(226, 232, 240, 0.8);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .accordion-header {
+    .drawer-handle-bar {
       width: 100%;
+      padding: 10px 0 12px 0;
       background: none;
       border: none;
-      padding: 14px 16px;
-      text-align: left;
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: #334155;
       cursor: pointer;
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
       align-items: center;
-      border-left: 4px solid var(--accent-green);
+      gap: 6px;
     }
-    .accordion-content {
-      padding: 0 16px 16px 16px;
+    /* iPhoneのホームバー風インジケーター */
+    .iphone-bar {
+      width: 36px;
+      height: 4px;
+      background-color: #cbd5e1;
+      border-radius: 2px;
+    }
+    .drawer-title-text {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .drawer-content {
+      max-height: 75vh;
+      overflow-y: auto;
+      padding: 0 16px 24px 16px;
       display: none;
     }
-    .accordion-content.open {
+    .drawer-content.open {
       display: block;
     }
 
@@ -354,8 +373,11 @@
       .info-sidebar {
         display: none; /* PC用サイドバーを非表示 */
       }
-      .mobile-accordion-card {
-        display: block; /* スマホ用アコーディオンを表示 */
+      .mobile-drawer {
+        display: block; /* スマホ用下部ドロワーを表示 */
+      }
+      body {
+        padding-bottom: 110px; /* ボトムバーと重ならないよう余白調整 */
       }
     }
   </style>
@@ -364,48 +386,6 @@
 
 <div class="container">
   <div class="app-title">幻獣育成計算ツール v2</div>
-
-  <!-- スマホ用折りたたみパネル（スマホ表示時のみ上部または下部に展開） -->
-  <div class="mobile-accordion-card">
-    <button class="accordion-header" onclick="toggleAccordion()">
-      <span>仕様説明・注意事項・餌箱優先度</span>
-      <span id="accordionIcon">▼</span>
-    </button>
-    <div class="accordion-content" id="accordionContent">
-      <div style="margin-bottom: 14px;">
-        <h4 style="font-size: 0.85rem; color: #334155; margin-bottom: 6px;">注意事項</h4>
-        <ol class="info-list">
-          <li>所持リストのチェックを確認する。</li>
-          <li>同調ボーナスの変更後は「最適配置」を実行する。</li>
-          <li>表示された基本ボーナスを参照してゲーム内で配置する。</li>
-          <li>ゲーム内の強化ページに合わせてページを入力する。<br><small style="color:#64748b;">※例: 2ページ目が強化可能な場合に「2」を選択。</small></li>
-        </ol>
-      </div>
-      <div>
-        <h4 style="font-size: 0.85rem; color: #334155; margin-bottom: 8px;">餌箱優先度（タイプ別平均能力指数）</h4>
-        <div class="feed-priority-grid">
-          <div class="feed-card" id="feedCardMob-補助">
-            <div id="topBadgeMob-補助" class="top-badge" style="display:none;">🔥 優先</div>
-            <div class="feed-type">補助</div>
-            <div class="feed-avg" id="feedAvgMob-補助">0.0000</div>
-            <div class="feed-count" id="feedCountMob-補助">(0体)</div>
-          </div>
-          <div class="feed-card" id="feedCardMob-攻撃">
-            <div id="topBadgeMob-攻撃" class="top-badge" style="display:none;">🔥 優先</div>
-            <div class="feed-type">攻撃</div>
-            <div class="feed-avg" id="feedAvgMob-攻撃">0.0000</div>
-            <div class="feed-count" id="feedCountMob-攻撃">(0体)</div>
-          </div>
-          <div class="feed-card" id="feedCardMob-防御">
-            <div id="topBadgeMob-防御" class="top-badge" style="display:none;">🔥 優先</div>
-            <div class="feed-type">防御</div>
-            <div class="feed-avg" id="feedAvgMob-防御">0.0000</div>
-            <div class="feed-count" id="feedCountMob-防御">(0体)</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <div class="layout-wrapper">
     <!-- メインコンテンツエリア -->
@@ -513,6 +493,51 @@
         </ol>
       </div>
     </aside>
+  </div>
+</div>
+
+<!-- スマホ用下部フローティングドロワー（iPhoneのバー風） -->
+<div class="mobile-drawer" id="mobileDrawer">
+  <button class="drawer-handle-bar" onclick="toggleDrawer()">
+    <div class="iphone-bar"></div>
+    <div class="drawer-title-text">
+      <span>使用説明 / 餌箱優先度</span>
+      <span id="drawerIcon" style="font-size: 0.75rem;">▲</span>
+    </div>
+  </button>
+  <div class="drawer-content" id="drawerContent">
+    <div style="margin-bottom: 16px;">
+      <h4 style="font-size: 0.85rem; color: #334155; margin-bottom: 8px;">餌箱優先度（タイプ別平均能力指数）</h4>
+      <div class="feed-priority-grid">
+        <div class="feed-card" id="feedCardMob-補助">
+          <div id="topBadgeMob-補助" class="top-badge" style="display:none;">🔥 優先</div>
+          <div class="feed-type">補助</div>
+          <div class="feed-avg" id="feedAvgMob-補助">0.0000</div>
+          <div class="feed-count" id="feedCountMob-補助">(0体)</div>
+        </div>
+        <div class="feed-card" id="feedCardMob-攻撃">
+          <div id="topBadgeMob-攻撃" class="top-badge" style="display:none;">🔥 優先</div>
+          <div class="feed-type">攻撃</div>
+          <div class="feed-avg" id="feedAvgMob-攻撃">0.0000</div>
+          <div class="feed-count" id="feedCountMob-攻撃">(0体)</div>
+        </div>
+        <div class="feed-card" id="feedCardMob-防御">
+          <div id="topBadgeMob-防御" class="top-badge" style="display:none;">🔥 優先</div>
+          <div class="feed-type">防御</div>
+          <div class="feed-avg" id="feedAvgMob-防御">0.0000</div>
+          <div class="feed-count" id="feedCountMob-防御">(0体)</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h4 style="font-size: 0.85rem; color: #334155; margin-bottom: 6px;">仕様・注意事項</h4>
+      <ol class="info-list">
+        <li>所持リストのチェックを確認する。</li>
+        <li>同調ボーナスの変更後は「最適配置」を実行する。</li>
+        <li>表示された基本ボーナスを参照してゲーム内で配置する。</li>
+        <li>ゲーム内の強化ページに合わせてページを入力する。<br><small style="color:#64748b;">※例: 2ページ目が強化可能な場合に「2」を選択。</small></li>
+      </ol>
+    </div>
   </div>
 </div>
 
@@ -695,58 +720,12 @@ function resetCurrentBuild() {
   }
 }
 
-function toggleOwned(id) {
-  const target = MASTER_DATA.find(b => b.id === id);
-  if (target) {
-    target.owned = !target.owned;
-    recalculateAll();
-    saveCurrentBuildData();
-    renderTable();
-  }
-}
-
-function updatePage(id, val) {
-  const target = MASTER_DATA.find(b => b.id === id);
-  if (target) {
-    let pageNum = parseInt(val) || 1;
-    target.page = pageNum;
-    recalculateAll();
-    saveCurrentBuildData();
-    renderTable();
-  }
-}
-
-function updateSync(id, val) {
-  const target = MASTER_DATA.find(b => b.id === id);
-  if (target) {
-    const config = RARITY_CONFIG[target.rarity] || { max: 100 };
-    let num = parseFloat(val) || 0;
-    if (num > config.max) num = config.max;
-    if (num < 0) num = 0;
-    target.sync = num;
-    recalculateAll();
-    saveCurrentBuildData();
-    renderTable();
-  }
-}
-
-function updateBase(id, val) {
-  const target = MASTER_DATA.find(b => b.id === id);
-  if (target) {
-    target.base = parseFloat(val);
-    recalculateAll();
-    saveCurrentBuildData();
-    renderTable();
-  }
-}
-
-function updateNickname(id, val) {
-  const target = MASTER_DATA.find(b => b.id === id);
-  if (target) {
-    target.nickname = val.trim();
-    saveCurrentBuildData();
-    renderTable();
-  }
+// スマホ用下部ドロワーの開閉制御
+function toggleDrawer() {
+  const content = document.getElementById('drawerContent');
+  const icon = document.getElementById('drawerIcon');
+  const isOpen = content.classList.toggle('open');
+  icon.textContent = isOpen ? '▼' : '▲';
 }
 
 // 再計算
@@ -1001,87 +980,77 @@ function renderTable() {
       }
     }
 
-    const displayName = e.nickname ? `${e.nickname} <span class="custom-name">(${e.name})</span>` : e.name;
+    let badgeClass = `badge badge-${e.rarity}`;
+    let extraBadge = '';
+    if (e.isCollab) extraBadge = '<span class="badge-collab">コラボ</span>';
+    if (e.isEvent) extraBadge = '<span class="badge-event">イベント</span>';
 
-    let isBaseError = false;
-    if (e.owned) {
-      if (e.base === 1.0 && count100 > 1) isBaseError = true;
-      if (e.base === 0.5 && count50 > 3) isBaseError = true;
+    let nameDisplay = e.name;
+    if (e.nickname) {
+      nameDisplay = `<span style="font-weight:700;">${e.nickname}</span><span class="custom-name">(${e.name})</span>`;
     }
 
-    const baseSelectHTML = e.owned ? `
-      <select class="select-base ${isBaseError ? 'error' : ''}" onchange="updateBase(${e.id}, this.value)">
-        <option value="1.0" ${e.base === 1.0 ? 'selected' : ''}>100%</option>
-        <option value="0.5" ${e.base === 0.5 ? 'selected' : ''}>50%</option>
-        <option value="0.2" ${e.base === 0.2 ? 'selected' : ''}>20%</option>
-      </select>
-    ` : '-';
-
-    const collabTag = e.isCollab ? `<span class="badge-collab">コラボ</span>` : '';
-    const eventTag = e.isEvent ? `<span class="badge-event">イベント</span>` : '';
+    let baseSelectClass = 'select-base';
+    if (e.owned) {
+      if (e.base === 1.0 && count100 > 1) baseSelectClass += ' error';
+      if (e.base === 0.5 && count50 > 3) baseSelectClass += ' error';
+    }
 
     tr.innerHTML = `
-      <td>
+      <td style="text-align:center;">
         <label class="switch">
           <input type="checkbox" ${e.owned ? 'checked' : ''} onchange="toggleOwned(${e.id})">
           <span class="slider"></span>
         </label>
       </td>
-      <td><strong>${displayName}</strong><br><span class="badge badge-${e.rarity}">${e.rarity}</span>${collabTag}${eventTag}</td>
+      <td>
+        ${nameDisplay}
+        <div><span class="${badgeClass}">${e.rarity}</span>${extraBadge}</div>
+      </td>
       <td><span class="type-tag">${e.type}</span></td>
       <td>
-        <input type="number" class="input-number" value="${e.page}" min="1" onchange="updatePage(${e.id}, this.value)">
+        <select class="input-number" onchange="updatePage(${e.id}, this.value)" ${!e.owned?'disabled':''}>
+          ${[1,2,3,4,5,6,7].map(p => `<option value="${p}" ${e.page===p?'selected':''}>${p}</option>`).join('')}
+        </select>
       </td>
       <td>
-        <input type="number" class="input-number" value="${e.sync}" step="${cfg.step}" min="0" max="${cfg.max}" onchange="updateSync(${e.id}, this.value)">
+        <input type="number" class="input-number" step="${cfg.step}" min="0" max="${cfg.max}" value="${e.sync}" onchange="updateSync(${e.id}, this.value)" ${!e.owned?'disabled':''}>
       </td>
-      <td>${baseSelectHTML}</td>
-      <td><strong>${totalBonusText}</strong></td>
-      <td><strong>${abilityIdx}</strong></td>
-      <td class="${diffClass}">${diffText}</td>
-      <td><strong>${priority}</strong></td>
+      <td>
+        <select class="${baseSelectClass}" onchange="updateBase(${e.id}, parseFloat(this.value))" ${!e.owned?'disabled':''}>
+          <option value="0.2" ${e.base===0.2?'selected':''}>0.2 (20%)</option>
+          <option value="0.5" ${e.base===0.5?'selected':''}>0.5 (50%)</option>
+          <option value="1.0" ${e.base===1.0?'selected':''}>1.0 (100%)</option>
+        </select>
+      </td>
+      <td style="font-weight:600; text-align:right;">${totalBonusText}</td>
+      <td style="font-weight:700; text-align:right; font-family:monospace;">${abilityIdx}</td>
+      <td style="text-align:right; font-family:monospace;" class="${diffClass}">${diffText}</td>
+      <td style="text-align:center; font-weight:800;">${priority}</td>
     `;
     tbody.appendChild(tr);
   });
 }
 
 function openMasterModal() {
-  document.getElementById('masterModal').style.display = 'block';
-  renderMasterList();
-}
-function closeMasterModal() {
-  document.getElementById('masterModal').style.display = 'none';
-}
-function renderMasterList() {
   const tbody = document.getElementById('masterTable');
   tbody.innerHTML = '';
-
-  MASTER_DATA.forEach(b => {
-    const collabTag = b.isCollab ? `<span class="badge-collab">コラボ</span>` : '';
-    const eventTag = b.isEvent ? `<span class="badge-event">期間限定</span>` : '';
-
+  MASTER_DATA.forEach(e => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><strong>${b.name}</strong></td>
-      <td><span class="badge badge-${b.rarity}">${b.rarity}</span>${collabTag}${eventTag} <span class="type-tag">${b.type}</span></td>
+      <td style="font-weight:600;">${e.name}</td>
+      <td><span class="badge badge-${e.rarity}">${e.rarity}</span> <span class="type-tag">${e.type}</span></td>
       <td>
-        <input type="text" class="input-nickname" value="${b.nickname || ''}" placeholder="愛称を入力..." onchange="updateNickname(${b.id}, this.value)">
+        <input type="text" class="input-nickname" value="${e.nickname || ''}" placeholder="例: 相棒、主力など" oninput="updateNickname(${e.id}, this.value)">
       </td>
     `;
     tbody.appendChild(tr);
   });
+  document.getElementById('masterModal').style.display = 'block';
 }
 
-// スマホ用アコーディオン開閉ロジック
-function toggleAccordion() {
-  const content = document.getElementById('accordionContent');
-  const icon = document.getElementById('accordionIcon');
-  content.classList.toggle('open');
-  if (content.classList.contains('open')) {
-    icon.textContent = '▲';
-  } else {
-    icon.textContent = '▼';
-  }
+function closeMasterModal() {
+  document.getElementById('masterModal').style.display = 'none';
 }
 </script>
 
