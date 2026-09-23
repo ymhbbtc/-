@@ -534,18 +534,26 @@
     </div>
     <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
       <div>
-        <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;" id="exportLabel">① 現在選択中のビルドの出力（共有用URL / コード）</label>
-        <div style="font-size:0.75rem; color:#64748b; margin-bottom:6px;">このビルドのデータを他の人へ共有したり、テキストとしてバックアップ・移行したりできます。</div>
+        <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;" id="exportLabel">① 現在選択中のビルドの共有用URL（短縮版）</label>
+        <div style="font-size:0.75rem; color:#64748b; margin-bottom:6px;">Discord等に貼り付けてもリンクとして綺麗に機能する短いURLを生成します。</div>
         <div style="display: flex; gap: 6px;">
-          <input type="text" id="shareUrlInput" readonly class="input-nickname" style="background:#f1f5f9; cursor:pointer;" onclick="this.select();">
+          <input type="text" id="shareUrlInput" readonly class="input-nickname" style="background:#f1f5f9; cursor:pointer;" onclick="this.select();" placeholder="「短縮URLを発行」を押してください">
+          <button class="btn btn-sub" style="padding: 6px 12px; font-size:0.8rem; white-space:nowrap;" id="generateShortBtn" onclick="generateShortShareUrl()">短縮URLを発行</button>
           <button class="btn" style="padding: 6px 12px; font-size:0.8rem; white-space:nowrap;" onclick="copyShareUrl()">コピー</button>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">バックアップ用コード（従来形式）</label>
+        <div style="display: flex; gap: 6px;">
+          <input type="text" id="rawCodeInput" readonly class="input-nickname" style="background:#f1f5f9; cursor:pointer; font-size:0.7rem;" onclick="this.select();">
+          <button class="btn btn-sub" style="padding: 6px 10px; font-size:0.75rem; white-space:nowrap;" onclick="copyRawCode()">コードコピー</button>
         </div>
       </div>
       <hr style="border:none; border-top:1px solid var(--border);">
       <div>
         <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;" id="importLabel">② データの入れ替え（インポート）</label>
-        <div style="font-size:0.75rem; color:#64748b; margin-bottom:6px;">バックアップした共有用URLやデータをここに貼り付けると、<strong>今選択しているビルドタブ</strong>にデータが上書き保存されます。</div>
-        <textarea id="importDataInput" class="input-nickname" rows="3" placeholder="共有用URL、またはデータ文字列をここに貼り付け..."></textarea>
+        <div style="font-size:0.75rem; color:#64748b; margin-bottom:6px;">短縮URL、またはバックアップ用コードをここに貼り付けると、<strong>今選択しているビルドタブ</strong>にデータが上書き保存されます。</div>
+        <textarea id="importDataInput" class="input-nickname" rows="3" placeholder="短縮URL、またはコードをここに貼り付け..."></textarea>
         <div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px;">
           <button class="btn" style="padding: 8px 16px; font-size:0.85rem;" onclick="importBuildData()">このビルドへデータを読み込む</button>
         </div>
@@ -602,7 +610,6 @@ function encodeBase64(str) {
 }
 
 function decodeBase64(base64Str) {
-  // URLやゴミ文字を取り除くクレンジング
   let cleanStr = base64Str.trim();
   if (cleanStr.includes('data=')) {
     const parts = cleanStr.split('data=');
@@ -619,10 +626,29 @@ function decodeBase64(base64Str) {
   return decodeURIComponent(decodedUri);
 }
 
-window.onload = () => {
+// 起動時のURLパラメータ処理（短縮ID ?p= または従来 ?data=）
+window.onload = async () => {
   const urlParams = new URLSearchParams(window.location.search);
+  const shortId = urlParams.get('p');
   const sharedData = urlParams.get('buildData') || urlParams.get('data');
-  if (sharedData) {
+
+  if (shortId) {
+    // 外部ペーストビンからデータを取得
+    try {
+      const res = await fetch(`https://dpaste.com/${shortId}.txt`);
+      if (res.ok) {
+        const jsonStr = await res.text();
+        const decoded = JSON.parse(jsonStr.trim());
+        if (Array.isArray(decoded)) {
+          MASTER_DATA = decoded;
+          saveCurrentBuildData();
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    } catch(e) {
+      console.error('Failed to load short url data', e);
+    }
+  } else if (sharedData) {
     try {
       const jsonStr = decodeBase64(sharedData);
       const decoded = JSON.parse(jsonStr);
@@ -1120,15 +1146,66 @@ function saveMasterModal() {
 function openShareModal() {
   const bName = getBuildName(currentBuildId);
   document.getElementById('shareModalTitle').textContent = `「${bName}」のデータ入出力・共有`;
-  document.getElementById('exportLabel').textContent = `① 「${bName}」の出力（共有用URL / コード）`;
-  document.getElementById('importLabel').textContent = `② 「${bName}」へのデータ入れ替え（インポート）`;
+  document.getElementById('exportLabel').textContent = `① 「${bName}」の共有用URL（短縮版）`;
 
   const jsonStr = JSON.stringify(MASTER_DATA);
   const encoded = encodeBase64(jsonStr);
-  const shareUrl = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
-  document.getElementById('shareUrlInput').value = shareUrl;
+  const rawCode = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
+  
+  document.getElementById('shareUrlInput').value = '';
+  document.getElementById('rawCodeInput').value = rawCode;
   document.getElementById('importDataInput').value = '';
   document.getElementById('shareModal').style.display = 'block';
+}
+
+async function generateShortShareUrl() {
+  const btn = document.getElementById('generateShortBtn');
+  const input = document.getElementById('shareUrlInput');
+  btn.textContent = '生成中...';
+  btn.disabled = true;
+
+  try {
+    const jsonStr = JSON.stringify(MASTER_DATA);
+    // dpaste.comのAPIを使用してテキストを保存し、IDを取得
+    const formData = new URLSearchParams();
+    formData.append('content', jsonStr);
+    formData.append('syntax', 'json');
+    formData.append('expiry_days', '365');
+
+    const response = await fetch('https://dpaste.com/api/', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (response.ok) {
+      const pasteUrlText = await response.text();
+      // 返ってくるテキストは例: "https://dpaste.com/XXXXX\n" のような形式
+      const cleanPasteUrl = pasteUrlText.trim();
+      const parts = cleanPasteUrl.split('/');
+      const pasteId = parts[parts.length - 1];
+
+      if (pasteId) {
+        const shortUrl = `${window.location.origin}${window.location.pathname}?p=${pasteId}`;
+        input.value = shortUrl;
+        btn.textContent = '生成完了！';
+      } else {
+        throw new Error('ID extraction failed');
+      }
+    } else {
+      throw new Error('API request failed');
+    }
+  } catch (e) {
+    // フォールバック：APIが万が一失敗した場合は従来のエンコードURLをセット
+    const jsonStr = JSON.stringify(MASTER_DATA);
+    const encoded = encodeBase64(jsonStr);
+    input.value = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
+    btn.textContent = 'フォールバック';
+  } finally {
+    setTimeout(() => {
+      btn.textContent = '短縮URLを発行';
+      btn.disabled = false;
+    }, 1500);
+  }
 }
 
 function closeShareModal() {
@@ -1137,25 +1214,56 @@ function closeShareModal() {
 
 function copyShareUrl() {
   const input = document.getElementById('shareUrlInput');
+  if (!input.value) {
+    alert('先に「短縮URLを発行」ボタンを押してください。');
+    return;
+  }
   input.select();
   input.setSelectionRange(0, 99999);
   navigator.clipboard.writeText(input.value).then(() => {
-    alert('共有用URLをコピーしました！');
+    alert('共有用URLをコピーしました！Discordにそのまま貼り付けられます。');
   }).catch(() => {
-    alert('コピーに失敗しました。手動でコピーしてください。');
+    alert('コピーに失敗しました。');
   });
 }
 
-function importBuildData() {
-  const val = document.getElementById('importDataInput').value.trim();
+function copyRawCode() {
+  const input = document.getElementById('rawCodeInput');
+  input.select();
+  input.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(input.value).then(() => {
+    alert('バックアップ用コードをコピーしました！');
+  }).catch(() => {
+    alert('コピーに失敗しました。');
+  });
+}
+
+async function importBuildData() {
+  let val = document.getElementById('importDataInput').value.trim();
   const bName = getBuildName(currentBuildId);
   if (!val) {
-    alert('共有用URLまたはデータ文字列を入力してください。');
+    alert('共有用URLまたはコードを入力してください。');
     return;
   }
+
   try {
-    const jsonStr = decodeBase64(val);
-    const parsed = JSON.parse(jsonStr);
+    let jsonStr = '';
+    // 短縮ID（?p=...）が含まれている場合の処理
+    if (val.includes('?p=')) {
+      const urlObj = new URL(val);
+      const shortId = urlObj.searchParams.get('p');
+      const res = await fetch(`https://dpaste.com/${shortId}.txt`);
+      if (res.ok) {
+        jsonStr = await res.text();
+      } else {
+        throw new Error('Failed to fetch short url data');
+      }
+    } else {
+      // 従来のBase64形式としてデコード
+      jsonStr = decodeBase64(val);
+    }
+
+    const parsed = JSON.parse(jsonStr.trim());
     if (Array.isArray(parsed) && parsed.length > 0) {
       MASTER_DATA = INITIAL_MASTER_DATA.map(initItem => {
         const found = parsed.find(s => s.id === initItem.id);
@@ -1180,7 +1288,7 @@ function importBuildData() {
       throw new Error('Invalid format');
     }
   } catch(e) {
-    alert('データの読み込みに失敗しました。正しい共有用URLやデータが入力されているかご確認ください。');
+    alert('データの読み込みに失敗しました。正しい共有用URLやコードが入力されているかご確認ください。');
   }
 }
 </script>
