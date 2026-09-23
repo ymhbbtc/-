@@ -38,8 +38,27 @@
       padding-bottom: 90px;
     }
 
-    .container { max-width: 1000px; margin: 0 auto; }
+    .container { max-width: 1250px; margin: 0 auto; }
     
+    /* レイアウト構成（PC: 2カラム、スマホ: 1カラム） */
+    .layout-wrapper {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .main-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* PC用サイドバー（右側フローティング） */
+    .info-sidebar {
+      width: 320px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 12px;
+    }
+
     .app-title {
       text-align: center;
       font-size: 1.3rem;
@@ -110,13 +129,13 @@
     .feed-priority-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
+      gap: 8px;
     }
     .feed-card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 12px;
-      padding: 10px;
+      padding: 8px;
       text-align: center;
       position: relative;
     }
@@ -125,18 +144,63 @@
       background: #f7fee7;
       box-shadow: 0 2px 8px rgba(101, 163, 13, 0.2);
     }
-    .feed-type { font-size: 0.8rem; font-weight: 800; color: #475569; }
-    .feed-avg { font-size: 1.1rem; font-weight: 800; color: #1e293b; margin: 4px 0; }
-    .feed-count { font-size: 0.7rem; color: #64748b; }
+    .feed-type { font-size: 0.75rem; font-weight: 800; color: #475569; }
+    .feed-avg { font-size: 0.95rem; font-weight: 800; color: #1e293b; margin: 2px 0; }
+    .feed-count { font-size: 0.65rem; color: #64748b; }
     .top-badge {
       position: absolute;
-      top: -8px; right: 8px;
+      top: -8px; right: 4px;
       background: #65a30d;
       color: #ffffff;
-      font-size: 0.65rem;
+      font-size: 0.6rem;
       font-weight: 800;
-      padding: 2px 6px;
+      padding: 1px 4px;
       border-radius: 10px;
+    }
+
+    /* 仕様説明・注意事項エリア */
+    .info-list {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #334155;
+    }
+    .info-list li {
+      margin-bottom: 6px;
+    }
+
+    /* スマホ用アコーディオンパネル */
+    .mobile-accordion-card {
+      display: none;
+      background: var(--card-bg);
+      border-radius: 16px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 4px 20px -2px rgba(148, 163, 184, 0.25);
+      overflow: hidden;
+    }
+    .accordion-header {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 14px 16px;
+      text-align: left;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 4px solid var(--accent-green);
+    }
+    .accordion-content {
+      padding: 0 16px 16px 16px;
+      display: none;
+    }
+    .accordion-content.open {
+      display: block;
     }
 
     .edit-name-btn { cursor: pointer; font-size: 0.85rem; margin-left: 4px; opacity: 0.7; }
@@ -177,7 +241,6 @@
     .badge-SSR { background: var(--ssr-bg); color: var(--ssr-text); border: 1px solid var(--ssr-border); }
     .badge-SR { background: var(--sr-bg); color: var(--sr-text); border: 1px solid var(--sr-border); }
 
-    /* コラボ・期間限定バッジのスタイル */
     .badge-collab {
       background: #fef3c7;
       color: #b45309;
@@ -262,7 +325,7 @@
       position: fixed; bottom: 0; left: 0; right: 0;
       background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px);
       padding: 12px 16px; border-top: 1px solid var(--border);
-      display: flex; justify-content: center; max-width: 1000px; margin: 0 auto; z-index: 10;
+      display: flex; justify-content: center; max-width: 1250px; margin: 0 auto; z-index: 10;
     }
 
     .modal {
@@ -282,6 +345,19 @@
     .modal-body { padding: 16px; overflow-y: auto; }
     .close-btn { background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; }
     .close-btn:hover { color: #fff; }
+
+    /* レスポンシブ切り替え用スタイル */
+    @media screen and (max-width: 900px) {
+      .layout-wrapper {
+        flex-direction: column;
+      }
+      .info-sidebar {
+        display: none; /* PC用サイドバーを非表示 */
+      }
+      .mobile-accordion-card {
+        display: block; /* スマホ用アコーディオンを表示 */
+      }
+    }
   </style>
 </head>
 <body>
@@ -289,90 +365,154 @@
 <div class="container">
   <div class="app-title">幻獣育成計算ツール v2</div>
 
-  <!-- ビルド切り替えカード -->
-  <div class="card">
-    <div class="card-title">
+  <!-- スマホ用折りたたみパネル（スマホ表示時のみ上部または下部に展開） -->
+  <div class="mobile-accordion-card">
+    <button class="accordion-header" onclick="toggleAccordion()">
+      <span>仕様説明・注意事項・餌箱優先度</span>
+      <span id="accordionIcon">▼</span>
+    </button>
+    <div class="accordion-content" id="accordionContent">
+      <div style="margin-bottom: 14px;">
+        <h4 style="font-size: 0.85rem; color: #334155; margin-bottom: 6px;">注意事項</h4>
+        <ol class="info-list">
+          <li>所持リストのチェックを確認する。</li>
+          <li>同調ボーナスの変更後は「最適配置」を実行する。</li>
+          <li>表示された基本ボーナスを参照してゲーム内で配置する。</li>
+          <li>ゲーム内の強化ページに合わせてページを入力する。<br><small style="color:#64748b;">※例: 2ページ目が強化可能な場合に「2」を選択。</small></li>
+        </ol>
+      </div>
       <div>
-        <span>保存ビルド選択: </span>
-        <strong id="currentBuildNameLabel">ビルド 1</strong>
-        <span class="edit-name-btn" title="ビルド名を変更" onclick="renameCurrentBuild()">✏️</span>
-      </div>
-      <span id="currentBuildLabel" style="font-size:0.75rem; color:#64748b;">選択中</span>
-    </div>
-    <div class="build-selector">
-      <div class="build-btn active" id="buildBtn1" onclick="switchBuild(1)">
-        <div class="build-title" id="buildTitle1">ビルド 1</div>
-        <div class="build-score" id="buildScore1">総合: 0.00</div>
-      </div>
-      <div class="build-btn" id="buildBtn2" onclick="switchBuild(2)">
-        <div class="build-title" id="buildTitle2">ビルド 2</div>
-        <div class="build-score" id="buildScore2">総合: 0.00</div>
-      </div>
-      <div class="build-btn" id="buildBtn3" onclick="switchBuild(3)">
-        <div class="build-title" id="buildTitle3">ビルド 3</div>
-        <div class="build-score" id="buildScore3">総合: 0.00</div>
+        <h4 style="font-size: 0.85rem; color: #334155; margin-bottom: 8px;">餌箱優先度（タイプ別平均能力指数）</h4>
+        <div class="feed-priority-grid">
+          <div class="feed-card" id="feedCardMob-補助">
+            <div id="topBadgeMob-補助" class="top-badge" style="display:none;">🔥 優先</div>
+            <div class="feed-type">補助</div>
+            <div class="feed-avg" id="feedAvgMob-補助">0.0000</div>
+            <div class="feed-count" id="feedCountMob-補助">(0体)</div>
+          </div>
+          <div class="feed-card" id="feedCardMob-攻撃">
+            <div id="topBadgeMob-攻撃" class="top-badge" style="display:none;">🔥 優先</div>
+            <div class="feed-type">攻撃</div>
+            <div class="feed-avg" id="feedAvgMob-攻撃">0.0000</div>
+            <div class="feed-count" id="feedCountMob-攻撃">(0体)</div>
+          </div>
+          <div class="feed-card" id="feedCardMob-防御">
+            <div id="topBadgeMob-防御" class="top-badge" style="display:none;">🔥 優先</div>
+            <div class="feed-type">防御</div>
+            <div class="feed-avg" id="feedAvgMob-防御">0.0000</div>
+            <div class="feed-count" id="feedCountMob-防御">(0体)</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- 餌箱優先度（サマリー表示） -->
-  <div class="card">
-    <div class="card-title">
-      <span>餌箱優先度（タイプ別平均能力指数）</span>
-    </div>
-    <div class="feed-priority-grid">
-      <div class="feed-card" id="feedCard-補助">
-        <div id="topBadge-補助" class="top-badge" style="display:none;">🔥 優先</div>
-        <div class="feed-type">補助</div>
-        <div class="feed-avg" id="feedAvg-補助">0.0000</div>
-        <div class="feed-count" id="feedCount-補助">(0体)</div>
+  <div class="layout-wrapper">
+    <!-- メインコンテンツエリア -->
+    <div class="main-content">
+      <!-- ビルド切り替えカード -->
+      <div class="card">
+        <div class="card-title">
+          <div>
+            <span>保存ビルド選択: </span>
+            <strong id="currentBuildNameLabel">ビルド 1</strong>
+            <span class="edit-name-btn" title="ビルド名を変更" onclick="renameCurrentBuild()">✏️</span>
+          </div>
+          <span id="currentBuildLabel" style="font-size:0.75rem; color:#64748b;">選択中</span>
+        </div>
+        <div class="build-selector">
+          <div class="build-btn active" id="buildBtn1" onclick="switchBuild(1)">
+            <div class="build-title" id="buildTitle1">ビルド 1</div>
+            <div class="build-score" id="buildScore1">総合: 0.00</div>
+          </div>
+          <div class="build-btn" id="buildBtn2" onclick="switchBuild(2)">
+            <div class="build-title" id="buildTitle2">ビルド 2</div>
+            <div class="build-score" id="buildScore2">総合: 0.00</div>
+          </div>
+          <div class="build-btn" id="buildBtn3" onclick="switchBuild(3)">
+            <div class="build-title" id="buildTitle3">ビルド 3</div>
+            <div class="build-score" id="buildScore3">総合: 0.00</div>
+          </div>
+        </div>
       </div>
-      <div class="feed-card" id="feedCard-攻撃">
-        <div id="topBadge-攻撃" class="top-badge" style="display:none;">🔥 優先</div>
-        <div class="feed-type">攻撃</div>
-        <div class="feed-avg" id="feedAvg-攻撃">0.0000</div>
-        <div class="feed-count" id="feedCount-攻撃">(0体)</div>
-      </div>
-      <div class="feed-card" id="feedCard-防御">
-        <div id="topBadge-防御" class="top-badge" style="display:none;">🔥 優先</div>
-        <div class="feed-type">防御</div>
-        <div class="feed-avg" id="feedAvg-防御">0.0000</div>
-        <div class="feed-count" id="feedCount-防御">(0体)</div>
-      </div>
-    </div>
-  </div>
 
-  <!-- データ一覧カード -->
-  <div class="card">
-    <div class="card-title">
-      <span>所持幻獣・育成リスト</span>
-      <div>
-        <button class="btn btn-sub" style="padding:5px 10px; font-size:0.75rem;" onclick="openMasterModal()">図鑑（名付け）</button>
-        <button class="btn btn-danger" style="padding:5px 10px; font-size:0.75rem;" onclick="resetCurrentBuild()">数値リセット</button>
+      <!-- データ一覧カード -->
+      <div class="card">
+        <div class="card-title">
+          <span>所持幻獣・育成リスト</span>
+          <div>
+            <button class="btn btn-sub" style="padding:5px 10px; font-size:0.75rem;" onclick="openMasterModal()">図鑑（名付け）</button>
+            <button class="btn btn-danger" style="padding:5px 10px; font-size:0.75rem;" onclick="resetCurrentBuild()">数値リセット</button>
+          </div>
+        </div>
+
+        <div id="alertBanner" class="alert-banner"></div>
+        
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th onclick="sortData('owned')">所持 ⇳</th>
+                <th onclick="sortData('name')">幻獣名 ⇳</th>
+                <th onclick="sortData('type')">タイプ ⇳</th>
+                <th onclick="sortData('page')">ページ ⇳</th>
+                <th onclick="sortData('sync')">同調(%) ⇳</th>
+                <th onclick="sortData('base')">基本 ⇳</th>
+                <th onclick="sortData('totalBonus')">合計 ⇳</th>
+                <th onclick="sortData('abilityIndex')">能力指数 ⇳</th>
+                <th onclick="sortData('diff')">差分(±) ⇳</th>
+                <th onclick="sortData('priority')">優先順 ⇳</th>
+              </tr>
+            </thead>
+            <tbody id="dataTable"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <div id="alertBanner" class="alert-banner"></div>
-    
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th onclick="sortData('owned')">所持 ⇳</th>
-            <th onclick="sortData('name')">幻獣名 ⇳</th>
-            <th onclick="sortData('type')">タイプ ⇳</th>
-            <th onclick="sortData('page')">ページ ⇳</th>
-            <th onclick="sortData('sync')">同調(%) ⇳</th>
-            <th onclick="sortData('base')">基本 ⇳</th>
-            <th onclick="sortData('totalBonus')">合計 ⇳</th>
-            <th onclick="sortData('abilityIndex')">能力指数 ⇳</th>
-            <th onclick="sortData('diff')">差分(±) ⇳</th>
-            <th onclick="sortData('priority')">優先順 ⇳</th>
-          </tr>
-        </thead>
-        <tbody id="dataTable"></tbody>
-      </table>
-    </div>
+    <!-- PC用サイドバー（右側フローティング） -->
+    <aside class="info-sidebar">
+      <!-- 餌箱優先度カード -->
+      <div class="card">
+        <div class="card-title" style="margin-bottom:8px; font-size:0.85rem;">
+          <span>餌箱優先度</span>
+        </div>
+        <div style="font-size:0.7rem; color:#64748b; margin-bottom:8px;">タイプ別平均能力指数</div>
+        <div class="feed-priority-grid">
+          <div class="feed-card" id="feedCard-補助">
+            <div id="topBadge-補助" class="top-badge" style="display:none;">🔥 優先</div>
+            <div class="feed-type">補助</div>
+            <div class="feed-avg" id="feedAvg-補助">0.0000</div>
+            <div class="feed-count" id="feedCount-補助">(0体)</div>
+          </div>
+          <div class="feed-card" id="feedCard-攻撃">
+            <div id="topBadge-攻撃" class="top-badge" style="display:none;">🔥 優先</div>
+            <div class="feed-type">攻撃</div>
+            <div class="feed-avg" id="feedAvg-攻撃">0.0000</div>
+            <div class="feed-count" id="feedCount-攻撃">(0体)</div>
+          </div>
+          <div class="feed-card" id="feedCard-防御">
+            <div id="topBadge-防御" class="top-badge" style="display:none;">🔥 優先</div>
+            <div class="feed-type">防御</div>
+            <div class="feed-avg" id="feedAvg-防御">0.0000</div>
+            <div class="feed-count" id="feedCount-防御">(0体)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 仕様説明・注意事項カード -->
+      <div class="card">
+        <div class="card-title" style="margin-bottom:8px; font-size:0.85rem;">
+          <span>仕様・注意事項</span>
+        </div>
+        <ol class="info-list">
+          <li>所持リストのチェックを確認する。</li>
+          <li>同調ボーナスの変更後は「最適配置」を実行する。</li>
+          <li>表示された基本ボーナスを参照してゲーム内で配置する。</li>
+          <li>ゲーム内の強化ページに合わせてページを入力する。<br><small style="color:#64748b;">※例: 2ページ目が強化可能な場合に「2」を選択。</small></li>
+        </ol>
+      </div>
+    </aside>
   </div>
 </div>
 
@@ -647,7 +787,7 @@ function recalculateAll() {
   updateFeedPriorityUI(ownedList);
 }
 
-// 餌箱優先度 UI表示の更新
+// 餌箱優先度 UI表示の更新（PC用とスマホ用を同期）
 function updateFeedPriorityUI(ownedList) {
   const types = ["補助", "攻撃", "防御"];
   let maxAvg = -1;
@@ -662,8 +802,12 @@ function updateFeedPriorityUI(ownedList) {
       avg = sum / count;
     }
 
+    // PC用
     document.getElementById(`feedAvg-${t}`).textContent = avg.toFixed(4);
     document.getElementById(`feedCount-${t}`).textContent = `(${count}体)`;
+    // スマホ用
+    document.getElementById(`feedAvgMob-${t}`).textContent = avg.toFixed(4);
+    document.getElementById(`feedCountMob-${t}`).textContent = `(${count}体)`;
 
     if (count > 0 && avg > maxAvg) {
       maxAvg = avg;
@@ -672,14 +816,23 @@ function updateFeedPriorityUI(ownedList) {
   });
 
   types.forEach(t => {
+    // PC用
     const card = document.getElementById(`feedCard-${t}`);
     const badge = document.getElementById(`topBadge-${t}`);
+    // スマホ用
+    const cardMob = document.getElementById(`feedCardMob-${t}`);
+    const badgeMob = document.getElementById(`topBadgeMob-${t}`);
+
     if (t === topType && maxAvg > 0) {
       card.classList.add('highlight');
       badge.style.display = 'block';
+      if(cardMob) cardMob.classList.add('highlight');
+      if(badgeMob) badgeMob.style.display = 'block';
     } else {
       card.classList.remove('highlight');
       badge.style.display = 'none';
+      if(cardMob) cardMob.classList.remove('highlight');
+      if(badgeMob) badgeMob.style.display = 'none';
     }
   });
 }
@@ -864,7 +1017,6 @@ function renderTable() {
       </select>
     ` : '-';
 
-    // タグ表示の作成
     const collabTag = e.isCollab ? `<span class="badge-collab">コラボ</span>` : '';
     const eventTag = e.isEvent ? `<span class="badge-event">イベント</span>` : '';
 
@@ -918,6 +1070,18 @@ function renderMasterList() {
     `;
     tbody.appendChild(tr);
   });
+}
+
+// スマホ用アコーディオン開閉ロジック
+function toggleAccordion() {
+  const content = document.getElementById('accordionContent');
+  const icon = document.getElementById('accordionIcon');
+  content.classList.toggle('open');
+  if (content.classList.contains('open')) {
+    icon.textContent = '▲';
+  } else {
+    icon.textContent = '▼';
+  }
 }
 </script>
 
