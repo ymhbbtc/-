@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>幻獣育成ツール v2</title>
+  <title>幻獣育成計算ツール v2</title>
   <style>
     :root {
       --bg: #e2e8f0;
@@ -892,7 +892,6 @@ function runOptimization() {
   const ownedList = MASTER_DATA.filter(e => e.owned);
   if (ownedList.length === 0) return;
 
-  // 最適配置の一時計算用データを準備
   const tempItems = ownedList.map(e => {
     const cfg = RARITY_CONFIG[e.rarity] || { coeff: 0 };
     const syncRatio = e.sync / 100;
