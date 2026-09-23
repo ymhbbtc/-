@@ -574,8 +574,8 @@ const FEED_RATE_MAP = {
 };
 
 const RARITY_CONFIG = {
-  UR:  { step: 12,  max: 120, coeff: 2.4 },
-  SSR: { step: 2.8, max: 56,  coeff: 1.65 },
+  UR:  { step: 3,  max: 120, coeff: 2.4 },
+  SSR: { step: 1.4, max: 56,  coeff: 1.65 },
   SR:  { step: 1,   max: 40,  coeff: 1.0 }
 };
 
@@ -604,7 +604,6 @@ let MASTER_DATA = [];
 let sortKey = '';
 let sortAsc = true;
 
-// 安全なBase64エンコード・デコード関数（日本語・マルチバイト文字対応）
 function encodeBase64(str) {
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
 }
@@ -626,14 +625,12 @@ function decodeBase64(base64Str) {
   return decodeURIComponent(decodedUri);
 }
 
-// 起動時のURLパラメータ処理（短縮ID ?p= または従来 ?data=）
 window.onload = async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const shortId = urlParams.get('p');
   const sharedData = urlParams.get('buildData') || urlParams.get('data');
 
   if (shortId) {
-    // 外部ペーストビンからデータを取得
     try {
       const res = await fetch(`https://dpaste.com/${shortId}.txt`);
       if (res.ok) {
@@ -892,51 +889,56 @@ function updateFeedPriorityUI(ownedList) {
 }
 
 function runOptimization() {
-  MASTER_DATA.forEach(e => {
-    const cfg = RARITY_CONFIG[e.rarity] || { coeff: 0 };
-    e.coeff = cfg.coeff;
-    const syncRatio = e.sync / 100;
-    e.eval100 = e.coeff * (1.0 + syncRatio);
-    e.eval50 = e.coeff * (0.5 + syncRatio);
-    e.base = 0.2;
-  });
-
   const ownedList = MASTER_DATA.filter(e => e.owned);
   if (ownedList.length === 0) return;
 
-  let best100Idx = -1;
+  // 最適配置の一時計算用データを準備
+  const tempItems = ownedList.map(e => {
+    const cfg = RARITY_CONFIG[e.rarity] || { coeff: 0 };
+    const syncRatio = e.sync / 100;
+    return {
+      item: e,
+      coeff: cfg.coeff,
+      eval100: cfg.coeff * (1.0 + syncRatio),
+      eval50: cfg.coeff * (0.5 + syncRatio)
+    };
+  });
+
+  tempItems.forEach(t => t.item.base = 0.2);
+
+  let best100Obj = null;
   let max100 = -1;
 
-  ownedList.forEach((e, idx) => {
-    if (e.coeff > 0 && e.eval100 > max100) {
-      max100 = e.eval100;
-      best100Idx = idx;
+  tempItems.forEach(t => {
+    if (t.coeff > 0 && t.eval100 > max100) {
+      max100 = t.eval100;
+      best100Obj = t;
     }
   });
 
   let cntType = { "補助": 0, "攻撃": 0, "防御": 0 };
 
-  if (best100Idx !== -1) {
-    ownedList[best100Idx].base = 1.0;
-    if (cntType[ownedList[best100Idx].type] !== undefined) {
-      cntType[ownedList[best100Idx].type]++;
+  if (best100Obj) {
+    best100Obj.item.base = 1.0;
+    if (cntType[best100Obj.item.type] !== undefined) {
+      cntType[best100Obj.item.type]++;
     }
   }
 
   const typePriority = { "補助": 1, "攻撃": 2, "防御": 3 };
 
   for (let slot = 0; slot < 3; slot++) {
-    let bestCandIdx = -1;
+    let bestCand = null;
     let bestEval = -1;
     let bestTypeCount = 999;
     let bestTypePrio = 999;
 
-    ownedList.forEach((e, i) => {
-      if (i !== best100Idx && e.base === 0.2 && e.coeff > 0) {
-        const curCount = cntType[e.type] !== undefined ? cntType[e.type] : 99;
-        const curPrio = typePriority[e.type] || 99;
+    tempItems.forEach(t => {
+      if (t !== best100Obj && t.item.base === 0.2 && t.coeff > 0) {
+        const curCount = cntType[t.item.type] !== undefined ? cntType[t.item.type] : 99;
+        const curPrio = typePriority[t.item.type] || 99;
 
-        const eval50Rounded = Math.round(e.eval50 * 10000) / 10000;
+        const eval50Rounded = Math.round(t.eval50 * 10000) / 10000;
         const bestEvalRounded = Math.round(bestEval * 10000) / 10000;
 
         let isBetter = false;
@@ -951,18 +953,18 @@ function runOptimization() {
         }
 
         if (isBetter) {
-          bestCandIdx = i;
-          bestEval = e.eval50;
+          bestCand = t;
+          bestEval = t.eval50;
           bestTypeCount = curCount;
           bestTypePrio = curPrio;
         }
       }
     });
 
-    if (bestCandIdx !== -1) {
-      ownedList[bestCandIdx].base = 0.5;
-      if (cntType[ownedList[bestCandIdx].type] !== undefined) {
-        cntType[ownedList[bestCandIdx].type]++;
+    if (bestCand) {
+      bestCand.item.base = 0.5;
+      if (cntType[bestCand.item.type] !== undefined) {
+        cntType[bestCand.item.type]++;
       }
     } else {
       break;
@@ -1021,7 +1023,9 @@ function renderTable() {
 
   const banner = document.getElementById('alertBanner');
   let errors = [];
+  if (count100 < 1) errors.push(`100%枠が不足しています (1枠必要 / 現在${count100}枠)`);
   if (count100 > 1) errors.push(`100%枠が超過しています (上限1枠 / 現在${count100}枠)`);
+  if (count50 < 3) errors.push(`50%枠が不足しています (3枠必要 / 現在${count50}枠)`);
   if (count50 > 3) errors.push(`50%枠が超過しています (上限3枠 / 現在${count50}枠)`);
 
   if (errors.length > 0) {
@@ -1067,8 +1071,8 @@ function renderTable() {
 
     let baseSelectClass = 'select-base';
     if (e.owned) {
-      if (e.base === 1.0 && count100 > 1) baseSelectClass += ' error';
-      if (e.base === 0.5 && count50 > 3) baseSelectClass += ' error';
+      if (e.base === 1.0 && (count100 < 1 || count100 > 1)) baseSelectClass += ' error';
+      if (e.base === 0.5 && (count50 < 3 || count50 > 3)) baseSelectClass += ' error';
     }
 
     tr.innerHTML = `
@@ -1089,7 +1093,7 @@ function renderTable() {
         </select>
       </td>
       <td>
-        <input type="number" class="input-number" step="${cfg.step}" min="0" max="${cfg.max}" value="${e.sync}" oninput="updateSync(${e.id}, this.value)" ${!e.owned?'disabled':''}>
+        <input type="number" class="input-number" step="${cfg.step}" min="0" max="${cfg.max}" value="${e.sync}" onchange="updateSync(${e.id}, this.value)" ${!e.owned?'disabled':''}>
       </td>
       <td>
         <select class="${baseSelectClass}" onchange="updateBase(${e.id}, parseFloat(this.value))" ${!e.owned?'disabled':''}>
@@ -1166,7 +1170,6 @@ async function generateShortShareUrl() {
 
   try {
     const jsonStr = JSON.stringify(MASTER_DATA);
-    // dpaste.comのAPIを使用してテキストを保存し、IDを取得
     const formData = new URLSearchParams();
     formData.append('content', jsonStr);
     formData.append('syntax', 'json');
@@ -1179,7 +1182,6 @@ async function generateShortShareUrl() {
 
     if (response.ok) {
       const pasteUrlText = await response.text();
-      // 返ってくるテキストは例: "https://dpaste.com/XXXXX\n" のような形式
       const cleanPasteUrl = pasteUrlText.trim();
       const parts = cleanPasteUrl.split('/');
       const pasteId = parts[parts.length - 1];
@@ -1195,7 +1197,6 @@ async function generateShortShareUrl() {
       throw new Error('API request failed');
     }
   } catch (e) {
-    // フォールバック：APIが万が一失敗した場合は従来のエンコードURLをセット
     const jsonStr = JSON.stringify(MASTER_DATA);
     const encoded = encodeBase64(jsonStr);
     input.value = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
@@ -1248,7 +1249,6 @@ async function importBuildData() {
 
   try {
     let jsonStr = '';
-    // 短縮ID（?p=...）が含まれている場合の処理
     if (val.includes('?p=')) {
       const urlObj = new URL(val);
       const shortId = urlObj.searchParams.get('p');
@@ -1259,7 +1259,6 @@ async function importBuildData() {
         throw new Error('Failed to fetch short url data');
       }
     } else {
-      // 従来のBase64形式としてデコード
       jsonStr = decodeBase64(val);
     }
 
