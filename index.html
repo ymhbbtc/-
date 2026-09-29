@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <!-- ▼ ピンチ操作（拡大縮小）を許可した状態の viewport 設定 ▼ -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- ▼ ズーム防止用 viewport 設定 ▼ -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>幻獣育成計算ツール v2</title>
 
   <!-- ▼ Discordなどのプレビュー用タグ（OGP） ▼ -->
@@ -300,9 +300,40 @@
     input:checked + .slider { background-color: #65a30d; }
     input:checked + .slider:before { transform: translateX(14px); }
 
-    .table-container { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left; background: #fff; }
-    th, td { padding: 7px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .table-container { 
+      width: 100%;
+      overflow-x: auto; 
+      border-radius: 10px; 
+      border: 1px solid var(--border); 
+    }
+    table { 
+      width: 100%; 
+      table-layout: fixed; 
+      border-collapse: collapse; 
+      font-size: 0.8rem; 
+      text-align: left; 
+      background: #fff; 
+    }
+    
+    /* 各カラムの可変幅比率設定 */
+    th:nth-child(1), td:nth-child(1) { width: 8%; text-align: center; } /* 所持 */
+    th:nth-child(2), td:nth-child(2) { width: 22%; }                   /* 幻獣名 */
+    th:nth-child(3), td:nth-child(3) { width: 9%; }                    /* タイプ */
+    th:nth-child(4), td:nth-child(4) { width: 10%; }                   /* ページ */
+    th:nth-child(5), td:nth-child(5) { width: 11%; }                   /* 同調(%) */
+    th:nth-child(6), td:nth-child(6) { width: 10%; }                   /* 基本 */
+    th:nth-child(7), td:nth-child(7) { width: 9%; }                    /* 合計 */
+    th:nth-child(8), td:nth-child(8) { width: 10%; }                   /* 能力指数 */
+    th:nth-child(9), td:nth-child(9) { width: 6%; }                    /* 差分 */
+    th:nth-child(10), td:nth-child(10) { width: 5%; text-align: center; } /* 優先 */
+
+    th, td { 
+      padding: 7px 4px; 
+      border-bottom: 1px solid var(--border); 
+      vertical-align: middle; 
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
     th {
       color: #64748b; font-weight: 700; background: #f8fafc;
       white-space: nowrap; cursor: pointer; user-select: none; font-size: 0.75rem;
@@ -311,23 +342,25 @@
 
     tr.unowned { opacity: 0.4; background: #f8fafc; }
 
-    /* ▼ 入力要素の自動ズーム防止 (16px以上にする) ▼ */
+    /* ▼ 自動伸縮対応の入力枠コントロール設定 ▼ */
     .input-number, .select-base, .input-nickname, textarea {
-      padding: 4px 3px;
+      width: 100%;
+      max-width: 100%;
+      padding: 4px 2px;
       border-radius: 6px;
       border: 1px solid #cbd5e1;
       background: #f8fafc;
       color: #1e293b;
-      font-size: 16px !important;
+      font-size: 16px; /* iOSフォーカス時ズーム防止 */
       font-weight: 600;
       text-align: center;
+      box-sizing: border-box;
     }
-    .input-number { width: 52px; }
-    .select-base { width: 68px; }
     .select-base.error { border-color: var(--danger); background: #fef2f2; color: #b91c1c; }
 
     .input-nickname {
-      width: 100%; padding: 5px; text-align: left;
+      text-align: left;
+      padding: 5px;
     }
 
     .custom-name { font-size: 0.68rem; color: #16a34a; font-weight: 600; display: block; }
@@ -365,15 +398,27 @@
       .info-sidebar { display: none; }
       .mobile-drawer { display: block; }
       .desktop-bottom-actions { display: none; }
-      body { padding-bottom: 125px; }
+      body { padding-bottom: 125px; padding-left: 4px; padding-right: 4px; }
       
-      /* スマホ向けに入力枠幅を画面幅へ収まるよう微調整 */
-      .input-number { width: 52px; padding: 2px 1px; }
-      .select-base { width: 66px; padding: 2px 1px; }
+      /* スマホ向けにテーブル文字サイズ・余白・入力欄サイズを最適化 */
+      table { font-size: 0.68rem; }
+      th { font-size: 0.65rem; padding: 5px 2px; }
+      td { padding: 5px 2px; }
+
+      .input-number, .select-base {
+        font-size: 0.72rem !important;
+        padding: 3px 1px;
+        border-radius: 4px;
+      }
+      .switch { width: 28px; height: 16px; }
+      .slider:before { height: 10px; width: 10px; left: 3px; bottom: 3px; }
+      input:checked + .slider:before { transform: translateX(12px); }
     }
+
     @media screen and (min-width: 901px) {
       .mobile-drawer { display: none; }
       .desktop-bottom-actions { display: flex; }
+      .input-number, .select-base { font-size: 0.8rem !important; }
     }
   </style>
 </head>
@@ -549,9 +594,9 @@
         <table>
           <thead>
             <tr>
-              <th>元の名前</th>
-              <th>レア / タイプ</th>
-              <th>ユーザー名付け (愛称)</th>
+              <th style="width:30%;">元の名前</th>
+              <th style="width:30%;">レア / タイプ</th>
+              <th style="width:40%;">ユーザー名付け (愛称)</th>
             </tr>
           </thead>
           <tbody id="masterTable"></tbody>
@@ -601,6 +646,7 @@
 </div>
 
 <script>
+// 1ページ目のリソース合計「30」を基準(1.0)とした比率テーブル
 const FEED_RATE_MAP = {
   1: 1,           // 30 / 30
   2: 2.4,         // 72 / 30
@@ -667,6 +713,7 @@ function decodeBase64(base64Str) {
   return decodeURIComponent(decodedUri);
 }
 
+// 共通テンプレートの展開処理
 function initTemplates() {
   const feedTpl = document.getElementById('feed-priority-template');
   document.querySelectorAll('.feed-priority-container').forEach(container => {
