@@ -610,7 +610,7 @@ const FEED_RATE_MAP = {
   6: 5.3333333,   // 160 / 30
   7: 6.1333333,   // 184 / 30
   8: 6.6666667,   // 200 / 30
-  9: 7.476,       // 9ページ目（仮設定）
+  9: 7.2,       // 216 / 30
   10: 8
 };
 
@@ -1125,7 +1125,7 @@ function renderTable() {
       <td><span class="type-tag">${e.type}</span></td>
       <td>
         <select class="input-number" onchange="updatePage(${e.id}, this.value)" ${!e.owned?'disabled':''}>
-          ${[1,2,3,4,5,6,7,8].map(p => `<option value="${p}" ${e.page===p?'selected':''}>${p}</option>`).join('')}
+          ${[1,2,3,4,5,6,7,8,9].map(p => `<option value="${p}" ${e.page===p?'selected':''}>${p}</option>`).join('')}
         </select>
       </td>
       <td>
